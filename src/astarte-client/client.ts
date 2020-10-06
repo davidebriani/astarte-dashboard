@@ -23,6 +23,9 @@ import { AstarteCustomBlock, toAstarteBlock } from './models/Block';
 import type { AstarteBlock } from './models/Block';
 import type { AstarteBlockDTO, AstarteJWT } from './types';
 
+const AstarteDevice = require('../react/astarte/Device').default;
+
+type AstarteDevice = typeof AstarteDevice;
 type Channel = any;
 type Trigger = any;
 
@@ -134,6 +137,10 @@ class AstarteClient {
   private phoenixSocket: PhoenixSocket | null;
 
   private token: AstarteJWT;
+
+  private devices: null | AstarteDevice[] = null;
+
+  private devicesNextRequestToken: null | string = null;
 
   constructor(config: AstarteClientConfig) {
     this.config = {
@@ -252,9 +259,49 @@ class AstarteClient {
     return this.$get(this.apiConfig.devicesStats(this.config));
   }
 
-  async getDevices(params: any): Promise<any> {
+  get canGetMoreDevices(): boolean {
+    return this.devicesNextRequestToken != null || this.devices == null;
+  }
+
+  async getSomeDevices({ details, count, refresh }: any): Promise<AstarteDevice[]> {
+    if (refresh) {
+      this.devices = null;
+      this.devicesNextRequestToken = null;
+    }
+    let devices = this.devices || [];
+    while (this.canGetMoreDevices && devices.length < count) {
+      const from = this.devicesNextRequestToken;
+      const response = await this.$getDevices({ details, from, limit: 100 });
+      this.devicesNextRequestToken = new URLSearchParams(response.links.next).get('from_token');
+      const fetchedDevices = response.data.map((device: any) => AstarteDevice.fromObject(device));
+      devices = devices.concat(fetchedDevices);
+      this.devices = devices;
+    }
+    return devices.slice(0, count);
+  }
+
+  async getAllDevices({ details, refresh }: any): Promise<AstarteDevice[]> {
+    if (refresh) {
+      this.devices = null;
+      this.devicesNextRequestToken = null;
+    }
+    let devices = this.devices || [];
+    if (this.devicesNextRequestToken) {
+      const from = this.devicesNextRequestToken;
+      const response = await this.$getDevices({ details, from });
+      this.devicesNextRequestToken = null;
+      const fetchedDevices = response.data.map((device: any) => AstarteDevice.fromObject(device));
+      devices = devices.concat(fetchedDevices);
+    } else if (this.devices == null) {
+      const response = await this.$getDevices({ details });
+      devices = response.data.map((device: any) => AstarteDevice.fromObject(device));
+    }
+    this.devices = devices;
+    return this.devices.slice();
+  }
+
+  private async $getDevices({ details, limit, from }: any): Promise<any> {
     const endpointUri = new URL(this.apiConfig.devices(this.config));
-    const { details, limit, from } = params;
     const query: any = {};
 
     if (details) {

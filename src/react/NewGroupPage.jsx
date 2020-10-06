@@ -20,7 +20,6 @@ import React, { useEffect, useState } from 'react';
 import { Button, Form, InputGroup, Spinner } from 'react-bootstrap';
 
 import { useAlerts } from './AlertManager';
-import Device from './astarte/Device';
 import SingleCardPage from './ui/SingleCardPage';
 import CheckableDeviceTable from './ui/CheckableDeviceTable';
 
@@ -34,15 +33,14 @@ export default ({ astarte, history }) => {
   const formAlerts = useAlerts();
 
   useEffect(() => {
-    const handleDevicesRequest = (response) => {
-      const deviceList = response.data.map((value) => Device.fromObject(value));
+    const handleDevicesRequest = (deviceList) => {
       setDevices(deviceList);
       setPhase('ok');
     };
     const handleDevicesError = () => {
       setPhase('err');
     };
-    astarte.getDevices({ details: true }).then(handleDevicesRequest).catch(handleDevicesError);
+    astarte.getAllDevices({ details: true }).then(handleDevicesRequest).catch(handleDevicesError);
   }, [astarte]);
 
   const createGroup = (e) => {

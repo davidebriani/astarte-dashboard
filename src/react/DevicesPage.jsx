@@ -32,13 +32,11 @@ import {
 import _ from 'lodash';
 
 import { Link } from 'react-router-dom';
-import Device from './astarte/Device';
 import SingleCardPage from './ui/SingleCardPage';
 import { useAlerts } from './AlertManager';
 import Highlight from './components/Highlight';
 
 const DEVICES_PER_PAGE = 20;
-const DEVICES_PER_REQUEST = 100;
 const MAX_SHOWN_PAGES = 10;
 
 const matchMetadata = (key, value, filterKey, filterValue) => {
@@ -92,7 +90,7 @@ export default ({ astarte, history }) => {
   const [phase, setPhase] = useState('loading');
   const [activePage, setActivePage] = useState(0);
   const [deviceList, setDeviceList] = useState([]);
-  const [requestToken, setRequestToken] = useState(false);
+  const [canLoadMoreDevices, setCanLoadMoreDevices] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [filters, setFilters] = useState({});
 
@@ -102,55 +100,37 @@ export default ({ astarte, history }) => {
     return _.chunk(devices, DEVICES_PER_PAGE);
   }, [deviceList, filters]);
 
-  const loadMoreDevices = async (fromToken, loadAllDevices = false) =>
-    astarte
-      .getDevices({
-        details: true,
-        from: fromToken,
-        limit: DEVICES_PER_REQUEST,
-      })
-      .then((resp) => {
-        const nextToken = new URLSearchParams(resp.links.next).get('from_token');
-        const devices = resp.data.map((value) => Device.fromObject(value));
-        setRequestToken(nextToken);
-
-        setDeviceList((previousList) => {
-          const updatedDeviceList = previousList.concat(devices);
-
-          const pageCount = Math.ceil(updatedDeviceList.length / DEVICES_PER_PAGE);
-          const shouldLoadMore = pageCount < activePage + MAX_SHOWN_PAGES || loadAllDevices;
-          if (shouldLoadMore && nextToken) {
-            loadMoreDevices(nextToken, loadAllDevices);
-          } else {
-            setPhase('ok');
-          }
-
-          return updatedDeviceList;
-        });
-      })
-      .catch((err) => {
-        pageAlerts.showError(`Couldn't retrieve the device list from Astarte: ${err.message}`);
-      });
+  const loadDevices = async (count) => {
+    if (count && count <= deviceList.length) {
+      return;
+    }
+    try {
+      const devices = await (count
+        ? astarte.getSomeDevices({ details: true, count })
+        : astarte.getAllDevices({ details: true }));
+      setDeviceList(devices);
+      setCanLoadMoreDevices(astarte.canGetMoreDevices);
+      setPhase('ok');
+    } catch (err) {
+      pageAlerts.showError(`Couldn't retrieve the device list from Astarte: ${err.message}`);
+    }
+  };
 
   const handlePageChange = (pageIndex) => {
-    if (pageIndex > pagedDevices.length - MAX_SHOWN_PAGES && requestToken) {
-      loadMoreDevices(requestToken);
-    }
     setActivePage(pageIndex);
+    loadDevices((pageIndex + MAX_SHOWN_PAGES) * DEVICES_PER_PAGE);
   };
 
   const handleFilterUpdate = (newFilters) => {
     if (activePage !== 0) {
       setActivePage(0);
     }
-    if (requestToken) {
-      loadMoreDevices(requestToken, true);
-    }
+    loadDevices();
     setFilters(newFilters);
   };
 
   useEffect(() => {
-    loadMoreDevices();
+    loadDevices(MAX_SHOWN_PAGES * DEVICES_PER_PAGE);
   }, []);
 
   let innerHTML;
@@ -188,7 +168,7 @@ export default ({ astarte, history }) => {
                 <Col>
                   <TablePagination
                     activePage={activePage}
-                    canLoadMorePages={!!requestToken}
+                    canLoadMorePages={canLoadMoreDevices}
                     lastPage={pagedDevices.length}
                     onPageChange={handlePageChange}
                   />

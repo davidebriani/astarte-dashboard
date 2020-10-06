@@ -58,6 +58,7 @@
     "jsx-a11y/click-events-have-key-events": "off",
     "jsx-a11y/label-has-associated-control": "off",
     "jsx-a11y/no-static-element-interactions": "off",
+    "no-await-in-loop": "off",
     "no-case-declarations": "off",
     "prettier/prettier": "error",
     "react/jsx-filename-extension": [
@@ -126,6 +127,7 @@
         "jsx-a11y/click-events-have-key-events": "off",
         "jsx-a11y/label-has-associated-control": "off",
         "jsx-a11y/no-static-element-interactions": "off",
+        "no-await-in-loop": "off",
         "no-case-declarations": "off",
         "prettier/prettier": "error",
         "react/jsx-filename-extension": [
@@ -150,7 +152,8 @@
           {
             "functions": false
           }
-        ]
+        ],
+        "@typescript-eslint/no-var-requires": 1
       },
       "settings": {
         "import/resolver": {
