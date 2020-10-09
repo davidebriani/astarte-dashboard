@@ -19,9 +19,12 @@
 import React from 'react';
 import { Pie } from 'react-chartjs-2';
 
-export default function DevicesPieChart(props) {
-  const { connectedDevices, disconnectedDevices } = props;
+interface Props {
+  connectedDevices: number;
+  disconnectedDevices: number;
+}
 
+export default ({ connectedDevices, disconnectedDevices }: Props): React.ReactElement => {
   const data = {
     labels: ['Disconnected', 'Connected'],
     datasets: [
@@ -50,4 +53,4 @@ export default function DevicesPieChart(props) {
       <Pie data={data} options={options} />
     </div>
   );
-}
+};

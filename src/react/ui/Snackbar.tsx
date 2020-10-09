@@ -19,10 +19,14 @@
 import React from 'react';
 import { Container, Toast } from 'react-bootstrap';
 
-import { useGlobalAlertsState } from '../AlertManager';
+import { useGlobalAlertsState, IAlert } from '../AlertManager';
 import useRelativeTime from '../hooks/useRelativeTime';
 
-const SnackbarAlert = ({ alert, ...props }) => {
+interface Props {
+  alert: IAlert;
+}
+
+const SnackbarAlert = ({ alert, ...props }: Props): React.ReactElement => {
   const alertRelativeTime = useRelativeTime(alert.timestamp);
   return (
     <Toast {...props} onClose={alert.close} className="mx-auto">
@@ -34,10 +38,10 @@ const SnackbarAlert = ({ alert, ...props }) => {
   );
 };
 
-export default () => {
+export default (): React.ReactElement => {
   const alerts = useGlobalAlertsState();
   if (!alerts || alerts.length === 0) {
-    return null;
+    return <></>;
   }
   return (
     <Container fluid className="fixed-bottom p-3">
