@@ -684,6 +684,10 @@ class AstarteClient {
     });
     return rooms;
   }
+
+  get realm(): string {
+    return this.config.realm;
+  }
 }
 
 export default AstarteClient;
