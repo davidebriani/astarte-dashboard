@@ -58,7 +58,9 @@ export const useChartProviders = <
   const fetchData = useCallback(async () => {
     setStatus('loading');
     try {
-      const providersData = await Promise.all(providers.map((provider) => provider.getData()));
+      const providersData = await Promise.all(
+        providers.map((provider) => provider.getData() as Promise<AstarteChartProviderValue>),
+      );
       setData(providersData);
       setStatus('ok');
     } catch (err) {
