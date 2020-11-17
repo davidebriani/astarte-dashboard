@@ -129,6 +129,11 @@ type AstarteChartProvider<
     }
   : never;
 
+type AstarteChartOperator<
+  SourceProvider extends AstarteChartProvider = AstarteChartProvider,
+  ResultProvider extends AstarteChartProvider = AstarteChartProvider
+> = (provider: SourceProvider) => ResultProvider;
+
 type AstarteConfig =
   | AstarteClient
   | {
@@ -220,10 +225,25 @@ export {
   getDeviceStats,
 };
 
+export {
+  getFilterOperator,
+  getFilterByDateOperator,
+  getFirstOperator,
+  getLastOperator,
+  getMapOperator,
+  getMaxOperator,
+  getMinOperator,
+  getPipeOperator,
+  getSortOperator,
+  getTakeOperator,
+  getTakeLastOperator,
+} from './operators';
+
 export type {
   AstarteChartSingleValue,
   AstarteChartListValue,
   AstarteChartProvider,
+  AstarteChartOperator,
   AstarteDeviceDatastreamIndividualProvider,
   AstarteDeviceDatastreamObjectProvider,
   AstarteDevicePropertyProvider,
