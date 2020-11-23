@@ -16,11 +16,13 @@
    limitations under the License.
 */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Col, Container, Card, Row, Spinner, Table } from 'react-bootstrap';
+import { getConnectedDevices } from 'astarte-charts';
+import { AstarteConnectedDevicesChart } from 'astarte-charts/react';
+
 import useFetch from './hooks/useFetch';
-import DevicesPieChart from './ui/DevicesPieChart';
 import WaitForData from './components/WaitForData';
 
 export default ({ astarte, history }) => {
@@ -84,7 +86,11 @@ export default ({ astarte, history }) => {
         <WaitForData data={devicesStats.value} status={devicesStats.status}>
           {({ connected_devices: connectedDevices, total_devices: totalDevices }) => (
             <Col xs={6} className={cellSpacingClass}>
-              <DevicesCard connectedDevices={connectedDevices} totalDevices={totalDevices} />
+              <DevicesCard
+                connectedDevices={connectedDevices}
+                totalDevices={totalDevices}
+                astarte={astarte}
+              />
             </Col>
           )}
         </WaitForData>
@@ -136,31 +142,32 @@ const ApiStatusCard = ({ appengine, realmManagement, pairing, showFlowStatus, fl
   </Card>
 );
 
-const DevicesCard = ({ connectedDevices, totalDevices }) => (
-  <Card id="devices-card" className="h-100">
-    <Card.Header as="h5">Devices</Card.Header>
-    <Card.Body>
-      <Container className="h-100 p-0" fluid>
-        <Row noGutters>
-          <Col xs={12} lg={6}>
-            <Card.Title>Connected devices</Card.Title>
-            <Card.Text>{connectedDevices}</Card.Text>
-            <Card.Title>Registered devices</Card.Title>
-            <Card.Text>{totalDevices}</Card.Text>
-          </Col>
-          <Col xs={12} lg={6}>
-            {totalDevices > 0 && (
-              <DevicesPieChart
-                connectedDevices={connectedDevices}
-                disconnectedDevices={totalDevices - connectedDevices}
-              />
-            )}
-          </Col>
-        </Row>
-      </Container>
-    </Card.Body>
-  </Card>
-);
+const DevicesCard = ({ connectedDevices, totalDevices, astarte }) => {
+  const connectedDevicesProvider = useMemo(() => getConnectedDevices(astarte), [astarte]);
+
+  return (
+    <Card id="devices-card" className="h-100">
+      <Card.Header as="h5">Devices</Card.Header>
+      <Card.Body>
+        <Container className="h-100 p-0" fluid>
+          <Row noGutters>
+            <Col xs={12} lg={6}>
+              <Card.Title>Connected devices</Card.Title>
+              <Card.Text>{connectedDevices}</Card.Text>
+              <Card.Title>Registered devices</Card.Title>
+              <Card.Text>{totalDevices}</Card.Text>
+            </Col>
+            <Col xs={12} lg={6}>
+              {totalDevices > 0 && (
+                <AstarteConnectedDevicesChart providers={[connectedDevicesProvider]} />
+              )}
+            </Col>
+          </Row>
+        </Container>
+      </Card.Body>
+    </Card>
+  );
+};
 
 const InterfacesCard = ({ interfaceList, onInterfaceClick, onInstallInterfaceClick }) => (
   <Card id="interfaces-card" className="h-100">
