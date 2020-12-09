@@ -38,12 +38,12 @@ import type {
   AstarteBlockDTO,
   AstarteDeviceDTO,
   AstarteJWT,
-  AstarteDeviceEvent,
   AstarteInterfaceValues,
   AstartePropertyData,
   AstarteDatastreamIndividualData,
   AstarteDatastreamObjectData,
 } from './types';
+import { AstarteDeviceEvent, decodeEvent } from './types/events';
 
 export type AstarteClientEvent = 'credentialsChange' | 'socketError' | 'socketClose';
 
@@ -712,7 +712,7 @@ class AstarteClient {
     }
 
     channel.on('new_event', (jsonEvent: any) => {
-      const decodedEvent = AstarteDeviceEvent.decode(jsonEvent);
+      const decodedEvent = decodeEvent(jsonEvent);
 
       if (decodedEvent) {
         eventHandler(decodedEvent);

@@ -40,7 +40,6 @@ export type {
   AstarteDataType,
   AstarteDataTuple,
   AstarteDataValue,
-  AstarteDeviceEvent,
   AstartePropertyData,
   AstarteDatastreamData,
   AstarteDatastreamIndividualData,
@@ -52,5 +51,10 @@ export type {
   AstarteAggregatedDatastreamInterfaceValues,
   AstarteInterfaceValues,
 } from './types';
+
+
+export type {
+    AstarteDeviceEvent,
+} from './types/events';
 
 export default AstarteClient;
