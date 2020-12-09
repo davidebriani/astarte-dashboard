@@ -37,7 +37,6 @@ import Icons exposing (Icon)
 import Json.Decode as Decode exposing (Value, at, string)
 import Json.Encode as Encode
 import ListUtils exposing (addWhen)
-import Page.Device as Device
 import Page.InterfaceBuilder as InterfaceBuilder
 import Page.ReactInit as ReactInit
 import Page.TriggerBuilder as TriggerBuilder
@@ -205,7 +204,6 @@ type Page
 type RealmPage
     = InterfaceBuilderPage InterfaceBuilder.Model
     | TriggerBuilderPage TriggerBuilder.Model
-    | DevicePage Device.Model
     | ReactInitPage ReactPageCategory
 
 
@@ -234,7 +232,6 @@ type Msg
     | UpdateSession (Maybe Session)
     | InterfaceBuilderMsg InterfaceBuilder.Msg
     | TriggerBuilderMsg TriggerBuilder.Msg
-    | DeviceMsg Device.Msg
     | NewFlashMessage Severity String (List String) Posix
     | ClearOldFlashMessages Posix
     | AppEngineHealthCheckDone (Result AstarteApi.Error Bool)
@@ -405,8 +402,6 @@ updateRealmPage realm realmPage msg model =
                 ( TriggerBuilderMsg subMsg, TriggerBuilderPage subModel ) ->
                     updateRealmPageHelper realm (TriggerBuilder.update model.session subMsg subModel) TriggerBuilderMsg TriggerBuilderPage
 
-                ( DeviceMsg subMsg, DevicePage subModel ) ->
-                    updateRealmPageHelper realm (Device.update model.session subMsg subModel) DeviceMsg DevicePage
 
                 -- Ignore messages from not matching pages
                 ( _, _ ) ->
@@ -506,7 +501,7 @@ pageInit realmRoute config session =
             initTriggerBuilderPage (Just name) session session.apiConfig.realm
 
         Route.ShowDevice deviceId ->
-            initDevicePage deviceId session session.apiConfig.realm
+            initReactPage session Devices "device-status" realmRoute
 
         Route.ShowDeviceData deviceId interfaceName ->
             initReactPage session Devices "device-data" realmRoute
@@ -603,18 +598,6 @@ initTriggerBuilderPage maybeTriggerName session realm =
     )
 
 
-initDevicePage : String -> Session -> String -> ( Page, Cmd Msg, Session )
-initDevicePage deviceId session realm =
-    let
-        ( initialModel, initialCommand ) =
-            Device.init session deviceId
-    in
-    ( Realm realm (DevicePage initialModel)
-    , Cmd.map DeviceMsg initialCommand
-    , session
-    )
-
-
 initInterfaceEditorPage : Session -> ( Page, Cmd Msg, Session )
 initInterfaceEditorPage session =
     let
@@ -643,14 +626,6 @@ setRoute model ( maybeRoute, maybeToken ) =
 
             else
                 Ports.unloadReactPage ()
-
-        astarteChannelsCommand =
-            case page of
-                Realm _ (DevicePage _) ->
-                    Cmd.none
-
-                _ ->
-                    Ports.leaveDeviceRoom ()
     in
     ( { model
         | selectedPage = page
@@ -659,7 +634,6 @@ setRoute model ( maybeRoute, maybeToken ) =
     , Cmd.batch
         [ command
         , reactEnvCommand
-        , astarteChannelsCommand
         ]
     )
 
@@ -1007,9 +981,6 @@ isSettingsRelated page =
 isDeviceRelated : Page -> Bool
 isDeviceRelated page =
     case page of
-        Realm _ (DevicePage _) ->
-            True
-
         Realm _ (ReactInitPage Devices) ->
             True
 
@@ -1092,10 +1063,6 @@ renderProtectedPage flashMessages page =
             TriggerBuilder.view submodel flashMessages
                 |> Html.map TriggerBuilderMsg
 
-        DevicePage submodel ->
-            Device.view submodel flashMessages
-                |> Html.map DeviceMsg
-
         ReactInitPage _ ->
             ReactInit.view flashMessages
                 |> Html.map (\a -> Ignore)
@@ -1124,9 +1091,6 @@ pageSubscriptions page =
 
         Realm _ (TriggerBuilderPage submodel) ->
             Sub.map TriggerBuilderMsg <| TriggerBuilder.subscriptions submodel
-
-        Realm _ (DevicePage submodel) ->
-            Sub.map DeviceMsg <| Device.subscriptions submodel
 
         _ ->
             Sub.none

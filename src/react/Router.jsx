@@ -38,6 +38,7 @@ import BlocksPage from './BlocksPage';
 import BlockSourcePage from './BlockSourcePage';
 import NewBlockPage from './NewBlockPage';
 import RealmSettingsPage from './RealmSettingsPage';
+import DeviceStatusPage from './DeviceStatusPage';
 import DeviceInterfaceValues from './DeviceInterfaceValues';
 
 export default ({ reactHistory, astarteClient, sessionManager, config, fallback }) => {
@@ -77,6 +78,9 @@ export default ({ reactHistory, astarteClient, sessionManager, config, fallback 
         </Route>
         <Route exact path="/devices/register">
           <RegisterDevicePage {...pageProps} />
+        </Route>
+        <Route exact path="/devices/:deviceId">
+          <DeviceStatusSubPath {...pageProps} />
         </Route>
         <Route exact path="/devices/:deviceId/interfaces/:interfaceName">
           <DeviceDataSubPath {...pageProps} />
@@ -181,6 +185,12 @@ function PipelineSubPath(props) {
   const { pipelineId } = useParams();
 
   return <PipelineSourcePage pipelineId={pipelineId} {...props} />;
+}
+
+function DeviceStatusSubPath(props) {
+  const { deviceId } = useParams();
+
+  return <DeviceStatusPage deviceId={deviceId} {...props} />;
 }
 
 function BlockSubPath(props) {
