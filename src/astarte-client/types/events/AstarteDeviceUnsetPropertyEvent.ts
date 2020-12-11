@@ -17,40 +17,45 @@
   limitations under the License.
 */
 
-import { AstarteDeviceEvent } from './AstarteDeviceEvent';
-import _ from 'lodash';
+import * as yup from 'yup';
 
-export class AstarteDeviceUnsetPropertyEvent extends AstarteDeviceEvent {
+import { AstarteDeviceBaseEvent } from './AstarteDeviceBaseEvent';
+
+interface AstarteDeviceUnsetPropertyObject {
+  device_id: string;
+  timestamp: number;
+  event: {
+    type: 'incoming_data';
+    interface: string;
+    path: string;
+    value: null;
+  };
+}
+
+const astarteDeviceUnsetPropertySchema: yup.ObjectSchema<AstarteDeviceUnsetPropertyObject> = yup
+  .object({
+    device_id: yup.string().required(),
+    timestamp: yup.number().integer().min(0).required(),
+    event: yup
+      .object({
+        type: yup.string().oneOf(['incoming_data']).required(),
+        interface: yup.string().required(),
+        path: yup.string().required(),
+        value: yup.mixed().oneOf([null]).defined(),
+      })
+      .required(),
+  })
+  .required();
+
+export class AstarteDeviceUnsetPropertyEvent extends AstarteDeviceBaseEvent {
   readonly interfaceName: string;
+
   readonly path: string;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private constructor(arg: any) {
-    super(arg);
-    if (
-      !arg.event ||
-      !_.isPlainObject(arg.event) ||
-      arg.event.type !== 'incoming_data' ||
-      arg.event.type !== null
-    ) {
-      throw Error('Invalid event');
-    }
-    if (typeof arg.event.interface !== 'string') {
-      throw Error('Invalid interface');
-    }
-    if (typeof arg.event.path !== 'string') {
-      throw Error('Invalid path');
-    }
-    if (arg.event.value) {
-      throw Error('Invalid sent value');
-    }
-
-    this.interfaceName = arg.event.interface;
-    this.path = arg.event.path;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static fromJSON(arg: any) {
-    return new AstarteDeviceUnsetPropertyEvent(arg);
+  constructor(obj: AstarteDeviceUnsetPropertyObject) {
+    super(obj);
+    const validatedObj = astarteDeviceUnsetPropertySchema.validateSync(obj);
+    this.interfaceName = validatedObj.event.interface;
+    this.path = validatedObj.event.path;
   }
 }

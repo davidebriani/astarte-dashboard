@@ -17,26 +17,38 @@
   limitations under the License.
 */
 
-import { AstarteDeviceEvent } from './AstarteDeviceEvent';
-import _ from 'lodash';
+import * as yup from 'yup';
 
-export class AstarteDeviceConnectedEvent extends AstarteDeviceEvent {
+import { AstarteDeviceBaseEvent } from './AstarteDeviceBaseEvent';
+
+interface AstarteDeviceConnectedEventObject {
+  device_id: string;
+  timestamp: number;
+  event: {
+    type: 'device_connected';
+    device_ip_address: string;
+  };
+}
+
+const astarteDeviceConnectedEventSchema: yup.ObjectSchema<AstarteDeviceConnectedEventObject> = yup
+  .object({
+    device_id: yup.string().required(),
+    timestamp: yup.number().integer().min(0).required(),
+    event: yup
+      .object({
+        type: yup.string().oneOf(['device_connected']).required(),
+        device_ip_address: yup.string().required(),
+      })
+      .required(),
+  })
+  .required();
+
+export class AstarteDeviceConnectedEvent extends AstarteDeviceBaseEvent {
   readonly ip: string;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private constructor(arg: any) {
-    super(arg);
-    if (!arg.event || !_.isPlainObject(arg.event) || arg.event.type !== 'device_disconnected') {
-      throw Error('Invalid event');
-    }
-    if (typeof arg.event.device_ip_address !== 'string') {
-      throw Error('Invalid device ip address');
-    }
-    this.ip = arg.event.device_ip_address;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static fromJSON(arg: any) {
-    return new AstarteDeviceConnectedEvent(arg);
+  constructor(obj: AstarteDeviceConnectedEventObject) {
+    super(obj);
+    const validatedObj = astarteDeviceConnectedEventSchema.validateSync(obj);
+    this.ip = validatedObj.event.device_ip_address;
   }
 }

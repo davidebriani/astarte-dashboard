@@ -1,4 +1,5 @@
 /* eslint-disable camelcase */
+/* eslint-disable no-template-curly-in-string */
 /*
   This file is part of Astarte.
 
@@ -17,38 +18,88 @@
   limitations under the License.
 */
 
-import { AstarteDeviceEvent } from './AstarteDeviceEvent';
-import type { AstarteDataType } from '../dataType';
+import * as yup from 'yup';
 import _ from 'lodash';
 
-export class AstarteDeviceIncomingDataEvent extends AstarteDeviceEvent {
+import { AstarteDeviceBaseEvent } from './AstarteDeviceBaseEvent';
+import type { AstarteDataValue } from '../dataType';
+
+type IndividualValue = NonNullable<AstarteDataValue>;
+type ObjectValue = { [key: string]: NonNullable<AstarteDataValue> };
+
+interface AstarteDeviceIncomingDataObject {
+  device_id: string;
+  timestamp: number;
+  event: {
+    type: 'incoming_data';
+    interface: string;
+    path: string;
+    value: IndividualValue | ObjectValue;
+  };
+}
+
+const astarteIndividualValueSchema = yup
+  .mixed()
+  .required()
+  .test('Astarte object value', '${path} must be an Astarte object value', (value: unknown) =>
+    [
+      yup.string().required(),
+      yup.number().required(),
+      yup.boolean().required(),
+      yup.array(yup.string().required()).defined(),
+      yup.array(yup.number().required()).defined(),
+      yup.array(yup.boolean().required()).defined(),
+    ].some((schema) => schema.isValidSync(value)),
+  );
+
+const astarteObjectValueSchema = yup
+  .mixed<ObjectValue>()
+  .required()
+  .test(
+    'Astarte object value',
+    '${path} must be an Astarte object value',
+    (obj: any) =>
+      _.isPlainObject(obj) &&
+      Object.values(obj).every((value) => astarteIndividualValueSchema.isValidSync(value)),
+  );
+
+const astarteDeviceIncomingDataSchema: yup.ObjectSchema<AstarteDeviceIncomingDataObject> = yup
+  .object({
+    device_id: yup.string().required(),
+    timestamp: yup.number().integer().min(0).required(),
+    event: yup
+      .object({
+        type: yup.string().oneOf(['incoming_data']).required(),
+        interface: yup.string().required(),
+        path: yup.string().required(),
+        value: yup
+          .mixed()
+          .required()
+          .test(
+            'Astarte individual or object value',
+            '${path} must be an Astarte individual or object value',
+            (value: unknown) =>
+              [astarteIndividualValueSchema, astarteObjectValueSchema].some((schema) =>
+                schema.isValidSync(value),
+              ),
+          ),
+      })
+      .required(),
+  })
+  .required();
+
+export class AstarteDeviceIncomingDataEvent extends AstarteDeviceBaseEvent {
   readonly interfaceName: string;
+
   readonly path: string;
-  readonly value: AstarteDataType;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private constructor(arg: any) {
-    super(arg);
-    if (!arg.event || !_.isPlainObject(arg.event) || arg.event.type !== 'incoming_data') {
-      throw Error('Invalid event');
-    }
-    if (typeof arg.event.interface !== 'string') {
-      throw Error('Invalid interface');
-    }
-    if (typeof arg.event.path !== 'string') {
-      throw Error('Invalid path');
-    }
-    if (!arg.event.value) {
-      throw Error('Invalid sent value');
-    }
+  readonly value: IndividualValue | ObjectValue;
 
-    this.interfaceName = arg.event.interface;
-    this.path = arg.event.path;
-    this.value = arg.event.value;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static fromJSON(arg: any) {
-    return new AstarteDeviceIncomingDataEvent(arg);
+  constructor(obj: AstarteDeviceIncomingDataObject) {
+    super(obj);
+    const validatedObj = astarteDeviceIncomingDataSchema.validateSync(obj);
+    this.interfaceName = validatedObj.event.interface;
+    this.path = validatedObj.event.path;
+    this.value = validatedObj.event.value;
   }
 }

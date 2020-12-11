@@ -17,20 +17,33 @@
   limitations under the License.
 */
 
-import { AstarteDeviceEvent } from './AstarteDeviceEvent';
-import _ from 'lodash';
+import * as yup from 'yup';
 
-export class AstarteDeviceDisconnectedEvent extends AstarteDeviceEvent {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private constructor(arg: any) {
-    super(arg);
-    if (!arg.event || !_.isPlainObject(arg.event) || arg.event.type !== 'device_disconnected') {
-      throw Error('Invalid event');
-    }
-  }
+import { AstarteDeviceBaseEvent } from './AstarteDeviceBaseEvent';
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static fromJSON(arg: any) {
-    return new AstarteDeviceDisconnectedEvent(arg);
+interface AstarteDeviceDisconnectedEventObject {
+  device_id: string;
+  timestamp: number;
+  event: {
+    type: 'device_disconnected';
+  };
+}
+
+const astarteDeviceDisconnectedEventSchema: yup.ObjectSchema<AstarteDeviceDisconnectedEventObject> = yup
+  .object({
+    device_id: yup.string().required(),
+    timestamp: yup.number().integer().min(0).required(),
+    event: yup
+      .object({
+        type: yup.string().oneOf(['device_disconnected']).required(),
+      })
+      .required(),
+  })
+  .required();
+
+export class AstarteDeviceDisconnectedEvent extends AstarteDeviceBaseEvent {
+  constructor(obj: AstarteDeviceDisconnectedEventObject) {
+    super(obj);
+    astarteDeviceDisconnectedEventSchema.validateSync(obj);
   }
 }

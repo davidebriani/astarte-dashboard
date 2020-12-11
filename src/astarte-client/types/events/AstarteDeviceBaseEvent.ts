@@ -17,27 +17,28 @@
    limitations under the License.
 */
 
-import _ from 'lodash';
+import * as yup from 'yup';
 
-export abstract class AstarteDeviceEvent {
+interface AstarteDeviceBaseEventObject {
+  device_id: string;
+  timestamp: number;
+}
+
+const astarteDeviceEventSchema: yup.ObjectSchema<AstarteDeviceBaseEventObject> = yup
+  .object({
+    device_id: yup.string().required(),
+    timestamp: yup.number().integer().min(0).required(),
+  })
+  .required();
+
+export abstract class AstarteDeviceBaseEvent {
   readonly deviceId: string;
+
   readonly timestamp: Date;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected constructor(arg: any) {
-    if (!arg || !_.isPlainObject(arg)) {
-      throw Error('Invalid argument');
-    }
-
-    if (!arg.device_id || typeof arg.device_id !== 'string') {
-      throw Error('Invalid device id');
-    }
-
-    if (!arg.timestamp || typeof arg.timestamp !== 'number') {
-      throw Error('Invalid timestamp');
-    }
-
-    this.deviceId = arg.device_id;
-    this.timestamp = new Date(arg.timestamp);
+  protected constructor(obj: AstarteDeviceBaseEventObject) {
+    const validatedObj = astarteDeviceEventSchema.validateSync(obj);
+    this.deviceId = validatedObj.device_id;
+    this.timestamp = new Date(validatedObj.timestamp);
   }
 }

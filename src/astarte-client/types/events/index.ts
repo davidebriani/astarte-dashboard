@@ -16,42 +16,36 @@
   limitations under the License.
 */
 
-import { AstarteDeviceEvent } from './AstarteDeviceEvent';
 import { AstarteDeviceConnectedEvent } from './AstarteDeviceConnectedEvent';
 import { AstarteDeviceDisconnectedEvent } from './AstarteDeviceDisconnectedEvent';
-//import { AstarteDeviceErrorEvent } from './AstarteDeviceErrorEvent';
+import { AstarteDeviceErrorEvent } from './AstarteDeviceErrorEvent';
 import { AstarteDeviceIncomingDataEvent } from './AstarteDeviceIncomingDataEvent';
 import { AstarteDeviceUnsetPropertyEvent } from './AstarteDeviceUnsetPropertyEvent';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function decodeEvent(arg: any): AstarteDeviceEvent | null {
-  return decodeAnyOf(
-    [
-      AstarteDeviceConnectedEvent.fromJSON,
-      AstarteDeviceDisconnectedEvent.fromJSON,
-      AstarteDeviceUnsetPropertyEvent.fromJSON,
-      AstarteDeviceIncomingDataEvent.fromJSON,
-    ],
-    arg,
-  );
-}
+type AstarteDeviceEvent =
+  | AstarteDeviceConnectedEvent
+  | AstarteDeviceDisconnectedEvent
+  | AstarteDeviceErrorEvent
+  | AstarteDeviceIncomingDataEvent
+  | AstarteDeviceUnsetPropertyEvent;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type EventDecoder = (arg: any) => AstarteDeviceEvent;
+const eventConstructors = [
+  AstarteDeviceConnectedEvent,
+  AstarteDeviceDisconnectedEvent,
+  AstarteDeviceUnsetPropertyEvent,
+  AstarteDeviceIncomingDataEvent,
+];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function decodeAnyOf(decoders: EventDecoder[], value: any): AstarteDeviceEvent | null {
-  let decodedValue = null;
-
-  for (let i = 0; i < decoders.length && decodedValue === null; i += 1) {
+function decodeEvent(obj: any): AstarteDeviceEvent | null {
+  let decodedEvent: AstarteDeviceEvent | null = null;
+  eventConstructors.forEach((EventConstructor) => {
     try {
-      decodedValue = decoders[i](value);
-    } catch (err) {
+      decodedEvent = new EventConstructor(obj);
+    } catch {
       // decoder not matching
     }
-  }
-
-  return decodedValue;
+  });
+  return decodedEvent;
 }
 
 export {
