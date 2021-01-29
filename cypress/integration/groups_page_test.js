@@ -12,20 +12,26 @@ describe('Groups page tests', () => {
         cy.fixture('groups')
           .as('groups')
           .then((groups) => {
-            cy.server();
-            cy.route('GET', `/appengine/v1/${realm.name}/groups`, groups);
             groups.data.forEach((groupName) => {
               const encodedGroupName = encodeURIComponent(groupName);
               const groupFixture = groupName.startsWith('special characters')
                 ? `group.special-characters.devices.json`
                 : `group.${groupName}.devices.json`;
               cy.fixture(groupFixture).as(`${encodedGroupName}-devices`);
-              cy.route(
+              cy.intercept(
                 'GET',
                 `/appengine/v1/${realm.name}/groups/${encodedGroupName}/devices?details=true`,
-                `@${encodedGroupName}-devices`,
+                { fixture: groupFixture },
               );
             });
+            // TODO: Since intercept() doesn't properly handle URLs with special characters, the
+            // intercept() below is added to catch all requests for a group so that we can mock
+            // a response even when the group has special characters in its name.
+            // It should be removed once intercept() supports URLs with special characters.
+            cy.intercept('GET', `/appengine/v1/${realm.name}/groups/*/devices?details=true`, {
+              fixture: `group.special-characters.devices.json`,
+            });
+            cy.intercept('GET', `/appengine/v1/${realm.name}/groups`, groups);
             cy.login();
             cy.visit('/groups');
           });
@@ -66,7 +72,10 @@ describe('Groups page tests', () => {
         const groupName = 'special characters %20///%%`~!@#$^&*()_-+=[]{};:\'"|\\<>,.';
         const encodedGroupName = encodeURIComponent(groupName);
         cy.get('table td').contains(groupName).click();
-        cy.location('pathname').should('eq', `/groups/${encodeURIComponent(encodedGroupName)}/edit`);
+        cy.location('pathname').should(
+          'eq',
+          `/groups/${encodeURIComponent(encodedGroupName)}/edit`,
+        );
       });
     });
   });
