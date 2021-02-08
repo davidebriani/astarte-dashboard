@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Initial device introspection during device registration.
 - Pipeline source visual editor.
 - Search filters for devices page.
+- Support target device or group in data triggers.
+
+### Changed
+- Change Flow routes to avoid possible conflicts between routes.
 
 ### Fixed
 - Fix bug which caused marking triggers as invalid on parametric endpoints containing an underscore.
@@ -42,12 +46,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Explicit timestamp is enabled by default for all mappings when interface type is changed to
   datastream.
 
-## [0.11.4] - Unreleased
+## [0.11.4] - 2021-01-26
 ### Changed
 - Disable ValueChanged, ValueChangedApplied and PathCreated triggers
   on datastream interfaces
 - Disable ValueChange and ValueChangeApplied triggers on /* paths
   (workaround to [astarte-platform/astarte#513](https://github.com/astarte-platform/astarte/issues/513)).
+- Change `/resource/:id` routes to `/resource/:id/edit` to avoid conflicts with `/resource/new` routes
 ### Fixed
 - Device sent bytes pie chart now showing up on Chrome browser.
 - Fix typos in the Trigger Editor

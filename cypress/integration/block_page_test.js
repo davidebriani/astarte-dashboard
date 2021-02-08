@@ -7,7 +7,7 @@ const blockTypeToLabel = {
 describe('Block page tests', () => {
   context('no access before login', () => {
     it('redirects to home', () => {
-      cy.visit('/blocks/blockname');
+      cy.visit('/blocks/blockname/edit');
       cy.location('pathname').should('eq', '/login');
     });
   });
@@ -18,21 +18,18 @@ describe('Block page tests', () => {
         cy.fixture('custom_block')
           .as('customBlock')
           .then((customBlock) => {
-            cy.server();
-            cy.route('GET', '/flow/v1/*/blocks/*', '@customBlock');
-            cy.route({
-              method: 'DELETE',
-              url: `/flow/v1/*/blocks/${customBlock.data.name}`,
-              status: 204,
-              response: '',
+            cy.intercept('GET', `/flow/v1/*/blocks/${customBlock.data.name}`, customBlock);
+            cy.intercept('DELETE', `/flow/v1/*/blocks/${customBlock.data.name}`, {
+              statusCode: 204,
+              body: '',
             }).as('deleteBlockRequest');
             cy.login();
-            cy.visit(`/blocks/${customBlock.data.name}`);
+            cy.visit(`/blocks/${customBlock.data.name}/edit`);
           });
       });
 
       it('successfully loads Block page for a custom block', function () {
-        cy.location('pathname').should('eq', `/blocks/${this.customBlock.data.name}`);
+        cy.location('pathname').should('eq', `/blocks/${this.customBlock.data.name}/edit`);
         cy.get('h2').contains('Block Details');
       });
 
@@ -43,6 +40,20 @@ describe('Block page tests', () => {
           cy.contains('Source');
           cy.contains('Schema');
         });
+      });
+
+      it('correctly displays a block with the name "new"', function () {
+        const block = {
+          name: 'new',
+          schema: {},
+          source: 'source',
+          type: 'producer',
+        };
+        cy.intercept('GET', '/flow/v1/*/blocks/new', { data: block });
+        cy.visit('/blocks/new/edit');
+        cy.location('pathname').should('eq', '/blocks/new/edit');
+        cy.get('h2').contains('Block Details');
+        cy.get('.main-content').contains('Name').next().contains('new');
       });
 
       it('can delete a custom block', function () {
@@ -65,14 +76,13 @@ describe('Block page tests', () => {
           .as('nativeBlock')
           .then((nativeBlock) => {
             cy.login();
-            cy.visit(`/blocks/${nativeBlock.data.name}`);
-            cy.server();
-            cy.route('GET', '/flow/v1/*/blocks/*', '@nativeBlock');
+            cy.visit(`/blocks/${nativeBlock.data.name}/edit`);
+            cy.intercept('GET', `/flow/v1/*/blocks/${nativeBlock.data.name}`, nativeBlock);
           });
       });
 
       it('successfully loads Block page for a native block', function () {
-        cy.location('pathname').should('eq', `/blocks/${this.nativeBlock.data.name}`);
+        cy.location('pathname').should('eq', `/blocks/${this.nativeBlock.data.name}/edit`);
         cy.get('h2').contains('Block Details');
       });
 

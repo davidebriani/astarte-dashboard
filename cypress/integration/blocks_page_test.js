@@ -8,9 +8,8 @@ describe('Blocks page tests', () => {
 
   context('authenticated', () => {
     beforeEach(function () {
-      cy.server();
       cy.fixture('blocks').as('blocks');
-      cy.route('GET', '/flow/v1/*/blocks', '@blocks').as('getBlocksRequest');
+      cy.intercept('GET', '/flow/v1/*/blocks', { fixture: 'blocks' }).as('getBlocksRequest');
       cy.login();
       cy.visit('/blocks');
       cy.wait('@getBlocksRequest');
@@ -61,7 +60,7 @@ describe('Blocks page tests', () => {
 
     it('each block has a primary button that redirects to the block page', function () {
       cy.get('.main-content .card button.btn-primary').contains('Show').first().click();
-      cy.location('pathname').should('eq', `/blocks/${this.blocks.data[0].name}`);
+      cy.location('pathname').should('eq', `/blocks/${this.blocks.data[0].name}/edit`);
     });
   });
 });

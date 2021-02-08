@@ -12,15 +12,14 @@ describe('Home page tests', () => {
       cy.fixture('interfaces').as('interfaces');
       cy.fixture('interface_majors').as('interfaceMajors');
       cy.fixture('triggers').as('triggers');
-      cy.server();
-      cy.route('GET', '/appengine/v1/*/stats/devices', '@devicesStats');
-      cy.route('GET', '/realmmanagement/v1/*/triggers', '@triggers');
-      cy.route('GET', '/realmmanagement/v1/*/interfaces', '@interfaces');
-      cy.route('GET', '/realmmanagement/v1/*/interfaces/*', '@interfaceMajors');
-      cy.route('GET', '/appengine/health', '');
-      cy.route('GET', '/realmmanagement/health', '');
-      cy.route('GET', '/pairing/health', '');
-      cy.route('GET', '/flow/health', '');
+      cy.intercept('GET', '/appengine/v1/*/stats/devices', { fixture: 'devices_stats' });
+      cy.intercept('GET', '/realmmanagement/v1/*/triggers', { fixture: 'triggers' });
+      cy.intercept('GET', '/realmmanagement/v1/*/interfaces', { fixture: 'interfaces' });
+      cy.intercept('GET', '/realmmanagement/v1/*/interfaces/*', { fixture: 'interface_majors' });
+      cy.intercept('GET', '/appengine/health', '');
+      cy.intercept('GET', '/realmmanagement/health', '');
+      cy.intercept('GET', '/pairing/health', '');
+      cy.intercept('GET', '/flow/health', '');
       cy.login();
       cy.visit('/');
     });
@@ -73,7 +72,7 @@ describe('Home page tests', () => {
           const interfaceName = this.interfaces.data[0];
           const interfaceMajor = Math.max(this.interfaceMajors.data);
           cy.contains(interfaceName).click();
-          cy.location('pathname').should('eq', `/interfaces/${interfaceName}/${interfaceMajor}`);
+          cy.location('pathname').should('eq', `/interfaces/${interfaceName}/${interfaceMajor}/edit`);
         });
       cy.visit('/');
       cy.get('#interfaces-card button').contains('Install a new interface').click();
@@ -93,7 +92,7 @@ describe('Home page tests', () => {
           }
           cy.get('button').contains('Install a new trigger');
           cy.contains(this.triggers.data[0]).click();
-          cy.location('pathname').should('eq', `/triggers/${this.triggers.data[0]}`);
+          cy.location('pathname').should('eq', `/triggers/${this.triggers.data[0]}/edit`);
         });
       cy.visit('/');
       cy.get('#triggers-card button').contains('Install a new trigger').click();
