@@ -1,5 +1,10 @@
 {
-  "extends": ["react-app", "plugin:cypress/recommended", "prettier"],
+  "extends": [
+    "react-app",
+    "plugin:cypress/recommended",
+    "plugin:@tanstack/eslint-plugin-query/recommended",
+    "prettier"
+  ],
   "settings": {
     "import/resolver": {
       "node": {
