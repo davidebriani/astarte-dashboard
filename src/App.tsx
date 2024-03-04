@@ -16,10 +16,9 @@
    limitations under the License.
 */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { BrowserRouter as RouterProvider } from 'react-router-dom';
 import { Col, Container, Row } from 'react-bootstrap';
-import { Provider as ReduxProvider } from 'react-redux';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import AlertsProvider from './AlertManager';
@@ -30,7 +29,6 @@ import PageRouter from './Router';
 import AstarteProvider, { useAstarte } from './AstarteManager';
 import type { DashboardConfig } from './types';
 import Snackbar from './ui/Snackbar';
-import createReduxStore from './store';
 
 const DashboardSidebar = () => {
   const config = useConfig();
@@ -73,19 +71,15 @@ const DashboardSidebar = () => {
 };
 
 const Dashboard = () => {
-  const astarte = useAstarte();
-  const reduxStore = useMemo(() => createReduxStore(astarte.client), [astarte.client]);
   return (
-    <ReduxProvider store={reduxStore}>
-      <Container fluid className="px-0">
-        <Row className="no-gutters">
-          <DashboardSidebar />
-          <Col className="main-content vh-100 overflow-auto">
-            <PageRouter />
-          </Col>
-        </Row>
-      </Container>
-    </ReduxProvider>
+    <Container fluid className="px-0">
+      <Row className="no-gutters">
+        <DashboardSidebar />
+        <Col className="main-content vh-100 overflow-auto">
+          <PageRouter />
+        </Col>
+      </Row>
+    </Container>
   );
 };
 
