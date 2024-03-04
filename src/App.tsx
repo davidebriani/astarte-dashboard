@@ -20,6 +20,7 @@ import React, { useMemo } from 'react';
 import { BrowserRouter as RouterProvider } from 'react-router-dom';
 import { Col, Container, Row } from 'react-bootstrap';
 import { Provider as ReduxProvider } from 'react-redux';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import AlertsProvider from './AlertManager';
 import ConfigProvider, { useConfig } from './ConfigManager';
@@ -108,19 +109,23 @@ interface Props {
   config: DashboardConfig | null;
 }
 
+const queryClient = new QueryClient();
+
 export default ({ config }: Props): React.ReactElement => (
-  <AlertsProvider>
-    <RouterProvider>
-      {config ? (
-        <ConfigProvider config={config}>
-          <AstarteProvider config={config}>
-            <Dashboard />
-          </AstarteProvider>
-        </ConfigProvider>
-      ) : (
-        <StandaloneEditor />
-      )}
-    </RouterProvider>
-    <Snackbar />
-  </AlertsProvider>
+  <QueryClientProvider client={queryClient}>
+    <AlertsProvider>
+      <RouterProvider>
+        {config ? (
+          <ConfigProvider config={config}>
+            <AstarteProvider config={config}>
+              <Dashboard />
+            </AstarteProvider>
+          </ConfigProvider>
+        ) : (
+          <StandaloneEditor />
+        )}
+      </RouterProvider>
+      <Snackbar />
+    </AlertsProvider>
+  </QueryClientProvider>
 );
