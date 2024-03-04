@@ -1,7 +1,7 @@
 /*
    This file is part of Astarte.
 
-   Copyright 2020-2021 Ispirata Srl
+   Copyright 2020-2024 SECO Mind Srl
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,19 +16,19 @@
    limitations under the License.
 */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Col, Container, Row, Spinner } from 'react-bootstrap';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { AstarteCustomBlock } from 'astarte-client';
-import _ from 'lodash';
+import { useMutation, useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { ErrorBoundary } from 'react-error-boundary';
 
-import { actions, useStoreDispatch, useStoreSelector } from './store';
 import { AlertsBanner, useAlerts } from './AlertManager';
+import { useAstarte } from './AstarteManager';
 import Empty from './components/Empty';
 import ConfirmModal from './components/modals/Confirm';
 import SingleCardPage from './ui/SingleCardPage';
-import WaitForData from './components/WaitForData';
 
 const blockTypeToLabel = {
   consumer: 'Consumer',
@@ -36,84 +36,58 @@ const blockTypeToLabel = {
   producer_consumer: 'Producer & Consumer',
 };
 
-export default (): React.ReactElement => {
+function BlockSource() {
   const { blockId = '' } = useParams();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletionAlerts, deletionAlertsController] = useAlerts();
   const navigate = useNavigate();
-  const dispatch = useStoreDispatch();
-  const blockData = useStoreSelector((selectors) => selectors.block(blockId));
-  const blockStatus = useStoreSelector((selectors) => selectors.blockStatus(blockId));
-  const isDeletingBlock = useStoreSelector((selectors) => selectors.isDeletingBlock(blockId));
+  const astarte = useAstarte();
+  const blockQuery = useSuspenseQuery({
+    queryKey: ['block', blockId],
+    queryFn: () => astarte.client.getBlock(blockId),
+  });
+  const deleteBlockMutation = useMutation({
+    mutationFn: () => astarte.client.deleteBlock(blockId),
+    onSuccess: () => navigate('/blocks'),
+    onError: (error) => {
+      deletionAlertsController.showError(`Couldn't delete block: ${error.message}`);
+      setShowDeleteModal(false);
+    },
+  });
 
-  useEffect(() => {
-    dispatch(actions.blocks.get(blockId));
-  }, [dispatch, blockId]);
-
-  const deleteBlock = useCallback(() => {
-    dispatch(actions.blocks.delete(blockId)).then((action) => {
-      if (action.meta.requestStatus === 'fulfilled') {
-        navigate('/blocks');
-      } else {
-        deletionAlertsController.showError(
-          `Couldn't delete block: ${_.get(action, 'error.message')}`,
-        );
-        setShowDeleteModal(false);
-      }
-    });
-  }, [dispatch, navigate, blockId, deletionAlertsController]);
+  const block = blockQuery.data;
 
   return (
     <>
-      <SingleCardPage title="Block Details" backLink="/blocks">
-        <AlertsBanner alerts={deletionAlerts} />
-        <WaitForData
-          data={blockData}
-          status={blockStatus}
-          fallback={
-            <Container fluid className="text-center">
-              <Spinner animation="border" role="status" />
-            </Container>
-          }
-          errorFallback={
-            <Empty
-              title="Couldn't load block source"
-              onRetry={() => dispatch(actions.blocks.get(blockId))}
-            />
-          }
-        >
-          {(block) => (
-            <Row>
-              <Col>
-                <h5 className="mt-2 mb-2">Name</h5>
-                <p>{block.name}</p>
-                <h5 className="mt-2 mb-2">Type</h5>
-                <p>{blockTypeToLabel[block.type]}</p>
-                {block instanceof AstarteCustomBlock && (
-                  <>
-                    <h5 className="mt-2 mb-2">Source</h5>
-                    <SyntaxHighlighter language="json" showLineNumbers>
-                      {block.source}
-                    </SyntaxHighlighter>
-                  </>
-                )}
-                <h5 className="mt-2 mb-2">Schema</h5>
-                <SyntaxHighlighter language="json" showLineNumbers>
-                  {JSON.stringify(block.schema, null, 2)}
-                </SyntaxHighlighter>
-              </Col>
-            </Row>
+      <AlertsBanner alerts={deletionAlerts} />
+      <Row>
+        <Col>
+          <h5 className="mt-2 mb-2">Name</h5>
+          <p>{block.name}</p>
+          <h5 className="mt-2 mb-2">Type</h5>
+          <p>{blockTypeToLabel[block.type]}</p>
+          {block instanceof AstarteCustomBlock && (
+            <>
+              <h5 className="mt-2 mb-2">Source</h5>
+              <SyntaxHighlighter language="json" showLineNumbers>
+                {block.source}
+              </SyntaxHighlighter>
+            </>
           )}
-        </WaitForData>
-      </SingleCardPage>
-      {blockStatus === 'ok' && blockData instanceof AstarteCustomBlock && (
-        <Row className="justify-content-end m-3">
+          <h5 className="mt-2 mb-2">Schema</h5>
+          <SyntaxHighlighter language="json" showLineNumbers>
+            {JSON.stringify(block.schema, null, 2)}
+          </SyntaxHighlighter>
+        </Col>
+      </Row>
+      {block instanceof AstarteCustomBlock && (
+        <Row className="justify-content-end m-2">
           <Button
             variant="danger"
             onClick={() => setShowDeleteModal(true)}
-            disabled={isDeletingBlock}
+            disabled={deleteBlockMutation.isPending}
           >
-            {isDeletingBlock && (
+            {deleteBlockMutation.isPending && (
               <Spinner as="span" size="sm" animation="border" role="status" className="mr-2" />
             )}
             Delete block
@@ -126,8 +100,8 @@ export default (): React.ReactElement => {
           confirmLabel="Delete"
           confirmVariant="danger"
           onCancel={() => setShowDeleteModal(false)}
-          onConfirm={deleteBlock}
-          isConfirming={isDeletingBlock}
+          onConfirm={() => deleteBlockMutation.mutate()}
+          isConfirming={deleteBlockMutation.isPending}
         >
           <p>
             Delete block <b>{blockId}</b>?
@@ -136,4 +110,31 @@ export default (): React.ReactElement => {
       )}
     </>
   );
-};
+}
+
+function BlockSourcePage() {
+  const queryErrorBoundary = useQueryErrorResetBoundary();
+
+  return (
+    <SingleCardPage title="Block Details" backLink="/blocks">
+      <Suspense
+        fallback={
+          <Container fluid className="text-center">
+            <Spinner animation="border" role="status" />
+          </Container>
+        }
+      >
+        <ErrorBoundary
+          FallbackComponent={(props) => (
+            <Empty title="Couldn't load block source" onRetry={props.resetErrorBoundary} />
+          )}
+          onReset={queryErrorBoundary.reset}
+        >
+          <BlockSource />
+        </ErrorBoundary>
+      </Suspense>
+    </SingleCardPage>
+  );
+}
+
+export default BlockSourcePage;

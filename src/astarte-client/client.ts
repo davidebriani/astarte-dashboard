@@ -178,6 +178,7 @@ class AstarteClient {
     this.getConfigAuth = this.getConfigAuth.bind(this);
     this.getDeviceRegistrationLimit = this.getDeviceRegistrationLimit.bind(this);
     this.getBlocks = this.getBlocks.bind(this);
+    this.registerBlock = this.registerBlock.bind(this);
     this.getDeviceData = this.getDeviceData.bind(this);
     this.getDevicesStats = this.getDevicesStats.bind(this);
     this.getInterface = this.getInterface.bind(this);
@@ -737,18 +738,33 @@ astarteAPIurl`${config.realmManagementApiUrl}v1/${'realm'}/interfaces/${'interfa
     }).then((response) => response.data);
   }
 
+  // private async $post(url: string, data: unknown) {
+  //   return axios({
+  //     method: 'post',
+  //     url,
+  //     headers: {
+  //       Authorization: `Bearer ${this.token}`,
+  //       'Content-Type': 'application/json;charset=UTF-8',
+  //     },
+  //     data: {
+  //       data,
+  //     },
+  //   })
+  //     .then((response) => response.data)
+  //     .catch((err) => {
+  //       throw new Error(err?.response?.data ?? err?.message);
+  //     });
+  // }
+
   private async $post(url: string, data: unknown) {
-    return axios({
+    return fetch(url, {
       method: 'post',
-      url,
       headers: {
         Authorization: `Bearer ${this.token}`,
         'Content-Type': 'application/json;charset=UTF-8',
       },
-      data: {
-        data,
-      },
-    }).then((response) => response.data);
+      body: JSON.stringify({ data }),
+    }).then((response) => response.json());
   }
 
   private async $put(url: string, data: unknown) {

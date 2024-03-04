@@ -1,7 +1,7 @@
 /*
    This file is part of Astarte.
 
-   Copyright 2020-2021 Ispirata Srl
+   Copyright 2020-2024 SECO Mind Srl
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,14 +16,15 @@
    limitations under the License.
 */
 
-import React, { useEffect } from 'react';
+import React, { Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge, Button, Card, CardDeck, Container, Spinner } from 'react-bootstrap';
 import { AstarteNativeBlock } from 'astarte-client';
 import type { AstarteBlock } from 'astarte-client';
+import { useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { ErrorBoundary } from 'react-error-boundary';
 
-import { actions, useStoreDispatch, useStoreSelector } from './store';
-import WaitForData from './components/WaitForData';
+import { useAstarte } from './AstarteManager';
 import Empty from './components/Empty';
 
 interface NewBlockCardProps {
@@ -78,50 +79,48 @@ function BlockCard({ block, onShow }: BlockCardProps) {
   );
 }
 
+function BlockList() {
+  const navigate = useNavigate();
+  const astarte = useAstarte();
+  const blocksQuery = useSuspenseQuery({ queryKey: ['blocks'], queryFn: astarte.client.getBlocks });
+  const blocks = blocksQuery.data;
+
+  return blocks.map((block, index) => (
+    <React.Fragment key={`fragment-${index}`}>
+      {index % 2 ? <div className="w-100 d-none d-md-block" /> : null}
+      <BlockCard block={block} onShow={() => navigate(`/blocks/${block.name}/edit`)} />
+      {index === blocks.length - 1 && blocks.length % 2 === 0 ? (
+        <div className="w-50 d-none d-md-block" />
+      ) : null}
+    </React.Fragment>
+  ));
+}
+
 export default (): React.ReactElement => {
   const navigate = useNavigate();
-  const dispatch = useStoreDispatch();
-  const blocksData = useStoreSelector((selectors) => selectors.blocks());
-  const blocksStatus = useStoreSelector((selectors) => selectors.blocksStatus());
-
-  useEffect(() => {
-    dispatch(actions.blocks.getList());
-  }, [dispatch]);
+  const queryErrorBoundary = useQueryErrorResetBoundary();
 
   return (
     <Container fluid className="p-3">
       <h2>Blocks</h2>
       <CardDeck className="mt-4">
         <NewBlockCard onCreate={() => navigate('/blocks/new')} />
-        <WaitForData
-          data={blocksData}
-          status={blocksStatus}
+        <Suspense
           fallback={
             <Container fluid className="text-center">
               <Spinner animation="border" role="status" />
             </Container>
           }
-          errorFallback={
-            <Empty
-              title="Couldn't load available blocks"
-              onRetry={() => dispatch(actions.blocks.getList())}
-            />
-          }
         >
-          {(blocks) => (
-            <>
-              {blocks.map((block, index) => (
-                <React.Fragment key={`fragment-${index}`}>
-                  {index % 2 ? <div className="w-100 d-none d-md-block" /> : null}
-                  <BlockCard block={block} onShow={() => navigate(`/blocks/${block.name}/edit`)} />
-                  {index === blocks.length - 1 && blocks.length % 2 === 0 ? (
-                    <div className="w-50 d-none d-md-block" />
-                  ) : null}
-                </React.Fragment>
-              ))}
-            </>
-          )}
-        </WaitForData>
+          <ErrorBoundary
+            FallbackComponent={(props) => (
+              <Empty title="Couldn't load available blocks" onRetry={props.resetErrorBoundary} />
+            )}
+            onReset={queryErrorBoundary.reset}
+          >
+            <BlockList />
+          </ErrorBoundary>
+        </Suspense>
       </CardDeck>
     </Container>
   );

@@ -1,7 +1,7 @@
 /*
    This file is part of Astarte.
 
-   Copyright 2020-2021 Ispirata Srl
+   Copyright 2020-2024 SECO Mind Srl
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
    limitations under the License.
 */
 
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Form, Row, Spinner } from 'react-bootstrap';
 import { AstarteCustomBlock } from 'astarte-client';
-import _ from 'lodash';
+import { useMutation } from '@tanstack/react-query';
 
-import { actions, useStoreDispatch, useStoreSelector } from './store';
 import { AlertsBanner, useAlerts } from './AlertManager';
+import { useAstarte } from './AstarteManager';
 import SingleCardPage from './ui/SingleCardPage';
 
 const isJSON = (string: string) => {
@@ -42,7 +42,7 @@ interface BlockState {
   schema: string;
 }
 
-export default (): React.ReactElement => {
+function NewBlockPage() {
   const [block, setBlock] = useState<BlockState>({
     name: '',
     source: '',
@@ -52,26 +52,14 @@ export default (): React.ReactElement => {
   const [isValidated, setIsValidated] = useState(false);
   const [creationAlerts, creationAlertsController] = useAlerts();
   const navigate = useNavigate();
-  const dispatch = useStoreDispatch();
-  const isRegisteringBlock = useStoreSelector((selectors) =>
-    selectors.isRegisteringBlock(block.name),
-  );
+  const astarte = useAstarte();
 
-  const createBlock = useCallback(() => {
-    const newBlock = new AstarteCustomBlock({
-      ...block,
-      schema: JSON.parse(block.schema.trim()),
-    });
-    dispatch(actions.blocks.register(newBlock)).then((action) => {
-      if (action.meta.requestStatus === 'fulfilled') {
-        navigate('/blocks');
-      } else {
-        creationAlertsController.showError(
-          `Couldn't create block: ${_.get(action, 'error.message')}`,
-        );
-      }
-    });
-  }, [dispatch, block, creationAlertsController, navigate]);
+  const registerBlockMutation = useMutation({
+    mutationFn: astarte.client.registerBlock,
+    onSuccess: () => navigate('/blocks'),
+    onError: (error) =>
+      creationAlertsController.showError(`Couldn't create block: ${error.message}`),
+  });
 
   const isValidBlockName = /^[a-zA-Z][a-zA-Z0-9-_]*$/.test(block.name);
   const isValidBlockSource = block.source !== '';
@@ -83,9 +71,13 @@ export default (): React.ReactElement => {
   const handleSubmit = useCallback(() => {
     setIsValidated(true);
     if (isValidBlock) {
-      createBlock();
+      const newBlock = new AstarteCustomBlock({
+        ...block,
+        schema: JSON.parse(block.schema.trim()),
+      });
+      registerBlockMutation.mutate(newBlock);
     }
-  }, [setIsValidated, createBlock, isValidBlock]);
+  }, [setIsValidated, isValidBlock, registerBlockMutation]);
 
   return (
     <>
@@ -146,10 +138,10 @@ export default (): React.ReactElement => {
       <Row className="justify-content-end m-3">
         <Button
           variant="primary"
-          onClick={isRegisteringBlock ? undefined : handleSubmit}
-          disabled={isRegisteringBlock || !isValidBlock}
+          onClick={registerBlockMutation.isPending ? undefined : handleSubmit}
+          disabled={registerBlockMutation.isPending || !isValidBlock}
         >
-          {isRegisteringBlock && (
+          {registerBlockMutation.isPending && (
             <Spinner as="span" size="sm" animation="border" role="status" className="mr-2" />
           )}
           Create new block
@@ -157,4 +149,6 @@ export default (): React.ReactElement => {
       </Row>
     </>
   );
-};
+}
+
+export default NewBlockPage;
